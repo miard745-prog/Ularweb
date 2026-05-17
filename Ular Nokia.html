@@ -1,0 +1,193 @@
+<!DOCTYPE html><html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snake Nokia PRO MAX</title>
+<style>
+body{
+margin:0;
+background:radial-gradient(circle,#2a0a3d,#000);
+font-family:Arial;
+display:flex;
+flex-direction:column;
+align-items:center;
+justify-content:center;
+height:100vh;
+color:#fff;
+overflow:hidden;
+}h1{ color:#ff4fd8; text-shadow:0 0 10px #ff4fd8; margin:10px; }
+
+canvas{ border:4px solid #ff4fd8; box-shadow:0 0 25px #ff4fd8; background:#1a0825; }
+
+.panel{ display:flex; gap:12px; margin-top:10px; font-size:14px; align-items:center; }
+
+#startScreen{ position:absolute; inset:0; background:rgba(0,0,0,0.92); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:10; }
+
+#startBtn{ padding:14px 30px; font-size:20px; background:#ff4fd8; color:#000; font-weight:bold; }
+
+/* CONTROL BUTTONS */ .controls{ position:fixed; bottom:30px; right:30px; display:grid; grid-template-columns:60px 60px 60px; grid-template-rows:60px 60px; gap:8px; }
+
+.controls button{ background:#3a0a3f; color:#ff4fd8; border:2px solid #ff4fd8; font-size:18px; border-radius:10px; }
+
+.controls button:active{ transform:scale(0.9); }
+
+#shop{ position:fixed; top:10px; right:10px; background:rgba(0,0,0,0.7); padding:10px; border:1px solid #ff4fd8; border-radius:10px; font-size:12px; }
+
+.skinBtn{display:block;margin:5px 0;padding:5px;background:#3a0a3f;color:#fff;border:none;width:120px;} </style>
+
+</head>
+<body><div id="startScreen">
+<h1>🐍 SNAKE PRO MAX</h1>
+<button id="startBtn">START</button>
+</div><h1>Snake PRO MAX</h1>
+<canvas id="game" width="400" height="400"></canvas><div class="panel">
+<div>Score: <span id="score">0</span></div>
+<div>Coins: <span id="coins">0</span></div>
+<div>High: <span id="high">0</span></div>
+<div>Power: <span id="power">-</span></div>
+</div><div id="shop">
+<b>SHOP</b>
+<button class="skinBtn" onclick="buySkin('blue',10)">Blue</button>
+<button class="skinBtn" onclick="buySkin('red',20)">Red</button>
+</div><div class="controls">
+<div></div>
+<button onclick="setDir('UP')">⬆</button>
+<div></div>
+<button onclick="setDir('LEFT')">⬅</button>
+<button onclick="setDir('DOWN')">⬇</button>
+<button onclick="setDir('RIGHT')">➡</button>
+</div><script>
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+const box=20;
+
+let snake,food,dir,score,coins,high;
+let interval=140,last=0,loop;
+let powerUps=[];
+let shield=false;
+let speedBoost=0;
+
+let skin="green";
+let owned=["green"];
+
+function load(){
+high=localStorage.getItem("high")||0;
+coins=Number(localStorage.getItem("coins")||0);
+skin=localStorage.getItem("skin")||"green";
+owned=JSON.parse(localStorage.getItem("owned")||"[\"green\"]");
+}
+
+function save(){
+localStorage.setItem("high",high);
+localStorage.setItem("coins",coins);
+localStorage.setItem("skin",skin);
+localStorage.setItem("owned",JSON.stringify(owned));
+}
+
+function init(){
+snake=[{x:200,y:200}];
+dir="RIGHT";
+score=0;
+powerUps=[];
+shield=false;
+speedBoost=0;
+food=randomFood();
+updateUI();
+if(loop) cancelAnimationFrame(loop);
+requestAnimationFrame(gameLoop);
+}
+
+function randomFood(){
+return{x:Math.floor(Math.random()*20)*box,y:Math.floor(Math.random()*20)*box};
+}
+
+function setDir(d){
+if(d=="LEFT" && dir!="RIGHT")dir="LEFT";
+if(d=="RIGHT" && dir!="LEFT")dir="RIGHT";
+if(d=="UP" && dir!="DOWN")dir="UP";
+if(d=="DOWN" && dir!="UP")dir="DOWN";
+}
+
+function collide(a,b){return b.some(p=>p.x===a.x&&p.y===a.y)}
+
+function update(){
+let head={...snake[0]};
+
+if(dir=="LEFT")head.x-=box;
+if(dir=="RIGHT")head.x+=box;
+if(dir=="UP")head.y-=box;
+if(dir=="DOWN")head.y+=box;
+
+if(head.x<0)head.x=380;
+if(head.y<0)head.y=380;
+if(head.x>=400)head.x=0;
+if(head.y>=400)head.y=0;
+
+if(!shield && collide(head,snake)){
+high=Math.max(high,score);
+save();
+alert("GAME OVER\nScore: "+score);
+init();
+return;
+}
+
+snake.unshift(head);
+
+if(head.x===food.x&&head.y===food.y){
+score++;
+coins+=5;
+food=randomFood();
+}else snake.pop();
+
+save();
+updateUI();
+}
+
+function draw(){
+ctx.fillStyle="#120018";
+ctx.fillRect(0,0,400,400);
+
+ctx.strokeStyle="rgba(255,79,216,0.08)";
+for(let i=0;i<20;i++)for(let j=0;j<20;j++)ctx.strokeRect(i*box,j*box,box,box);
+
+snake.forEach((s,i)=>{
+ctx.fillStyle=i==0?"#ff4fd8":"#ff7de8";
+ctx.shadowBlur=10;
+ctx.shadowColor="#ff4fd8";
+ctx.fillRect(s.x,s.y,box,box);
+});
+
+ctx.shadowBlur=0;
+ctx.fillStyle="gold";
+ctx.beginPath();ctx.arc(food.x+10,food.y+10,8,0,Math.PI*2);ctx.fill();
+}
+
+function gameLoop(t){
+if(t-last>interval){update();draw();last=t;}
+loop=requestAnimationFrame(gameLoop);
+}
+
+function updateUI(){
+document.getElementById("score").innerText=score;
+document.getElementById("coins").innerText=coins;
+document.getElementById("high").innerText=high;
+}
+
+function buySkin(s,price){
+if(coins>=price && !owned.includes(s)){
+coins-=price;
+owned.push(s);
+skin=s;
+save();
+updateUI();
+}else alert("Coin kurang");
+}
+
+load();
+
+document.getElementById("startBtn").onclick=()=>{
+document.getElementById("startScreen").style.display="none";
+init();
+};
+</script></body>
+</html>
